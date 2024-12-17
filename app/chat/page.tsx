@@ -75,12 +75,12 @@ const handleSendMessage = async () => {
   return (
     <div className={styles.container}>
       <div className={styles.chatWindow}>
-        {chatHistory.map((chat, index) => (
+        {/* {chatHistory.map((chat, index) => (
           <div key={index} className={styles.chatBubble}>
             {chat.text && <p>{chat.text}</p>}
             {chat.image && <img src={chat.image} alt="Uploaded preview" />}
           </div>
-        ))}
+        ))} */}
       </div>
 
       <div className={styles.inputArea}>
