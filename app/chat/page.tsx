@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 
 const ChatInterface: React.FC = () => {
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<{ text?: string; image?: string }[]>([]);
@@ -44,7 +45,7 @@ const handleSendMessage = async () => {
   
       // Send request to backend
       const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
-     
+     setLoading(true)
       await axios.post(`${VERI_BASEURL}/overly/message`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -52,6 +53,7 @@ const handleSendMessage = async () => {
       });
   
       // Clear the form fields after sending the message
+      setLoading(false)
       setMessage("");
       setImage(null);
       setPreviewUrl(null); // Reset preview if any
@@ -115,9 +117,12 @@ const handleSendMessage = async () => {
           <label htmlFor="upload" className={styles.uploadButton}>
             📷
           </label>
-          <button onClick={handleSendMessage} className={styles.sendButton}>
+          {loading?
+          'sending...':
+          (<button onClick={handleSendMessage} className={styles.sendButton}>
             Send
-          </button>
+          </button>)}
+
         </div>
       </div>
     </div>
