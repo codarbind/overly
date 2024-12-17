@@ -3,14 +3,13 @@
 import React, { useEffect, useState } from "react";
 import styles from "../../styles/ChatInterface.module.css"; // CSS module for styling
 import axios from "axios";
-import { useRouter } from "next/router";
 
 const ChatInterface: React.FC = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [chatHistory, setChatHistory] = useState<{ text?: string; image?: string }[]>([]);
+  //const [chatHistory, setChatHistory] = useState<{ text?: string; image?: string }[]>([]);
 
   useEffect(() => {
 

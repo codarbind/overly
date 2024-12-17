@@ -3,7 +3,6 @@
 import React, { useState, useEffect, } from "react";
 import styles from "../../styles/PhoneRegistration.module.css"; // CSS module for styling
 import axios from "axios";
-import { useRouter } from "next/router";
 interface Country {
   name: string;
   flag: string;
@@ -24,7 +23,7 @@ const PhoneRegistration: React.FC = () => {
     axios
       .get("https://restcountries.com/v3.1/all?fields=name,flags,idd")
       .then((response) => {
-        const countryData = response.data.map((country: any) => ({
+        const countryData = response.data.map((country: { name: { common: string; }; flags: { svg: string; }; idd: { root: string; suffixes: string[]; }; }) => ({
           name: country.name.common,
           flag: country.flags.svg,
           callingCode: country.idd?.root
@@ -41,7 +40,9 @@ const PhoneRegistration: React.FC = () => {
         setFilteredCountries(countryData);
       })
       .catch((error) => {
-      //  console.error("Error fetching countries:", error);
+        let y=error
+        y=null
+       console.error("Error fetching countries:", y);
       });
   }, []);
 
@@ -90,11 +91,13 @@ const PhoneRegistration: React.FC = () => {
         return;
       }
   
-      const data = await response.json();
+       await response.json();
      // console.log(data.message); // OTP sent successfully
       setOtpSent(true);
     } catch (error) {
-     // console.error("Error sending OTP:", error);
+      let y=error
+      y=null
+      console.error("Error sending OTP:", y);
       alert("Failed to send OTP. Please try again.");
     }
   };
@@ -132,7 +135,10 @@ const PhoneRegistration: React.FC = () => {
       setIsVerified(true);
       window.location.replace("/chat")
     } catch (error) {
-     // console.error("Error verifying OTP:", error);
+      let y=error
+      y=null
+
+      console.error("Error verifying OTP:", y);
       alert("Failed to verify OTP. Please try again.");
     }
   };
