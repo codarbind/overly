@@ -15,7 +15,7 @@ const ChatInterface: React.FC = () => {
 
     const code = localStorage.getItem("code");
     if (!code) {
-       window.location.replace("/register"); // Redirect to /register
+       window.location.replace("/"); // Redirect to /
     }
 }, []);
 const handleSendMessage = async () => {
@@ -28,9 +28,9 @@ const handleSendMessage = async () => {
   
     const code = localStorage.getItem("code"); // Get the code (encrypted phone number) from localStorage
   
-    // If no code, redirect to /register
+    // If no code, redirect to /
     if (!code) {
-      window.location.replace("/register"); 
+      window.location.replace("/"); 
       return; // Prevent further execution if no code is found
     }
   

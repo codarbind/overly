@@ -1,101 +1,220 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import React, { useState, useEffect, } from "react";
+import styles from "../styles/PhoneRegistration.module.css"; // CSS module for styling
+import axios from "axios";
+interface Country {
+  name: string;
+  flag: string;
+  callingCode: string;
+}
+
+const PhoneRegistration: React.FC = () => {
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [countryCode, setCountryCode] = useState("1"); // Default to USA code
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isVerified, setIsVerified] = useState(false);
+
+  useEffect(() => {
+    axios
+      .get("https://restcountries.com/v3.1/all?fields=name,flags,idd")
+      .then((response) => {
+        const countryData = response.data.map((country: { name: { common: string; }; flags: { svg: string; }; idd: { root: string; suffixes: string[]; }; }) => ({
+          name: country.name.common,
+          flag: country.flags.svg,
+          callingCode: country.idd?.root
+            ? `${country.idd.root}${country.idd.suffixes?.[0] || ""}`
+            : "1", // Default to 1 if no calling code
+        }));
+
+        // Sort countries alphabetically
+        countryData.sort((a: Country, b: Country) =>
+          a.name.localeCompare(b.name)
+        );
+
+        setCountries(countryData);
+        setFilteredCountries(countryData);
+      })
+      .catch((error) => {
+        let y=error
+        y=null
+       console.error("Error fetching countries:", y);
+      });
+  }, []);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value.toLowerCase();
+    setSearchTerm(term);
+    setFilteredCountries(
+      countries.filter((country) =>
+        country.name.toLowerCase().includes(term)
+      )
+    );
+  };
+
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow only numbers and prevent leading zero
+    if (/^[1-9][0-9]*$|^$/.test(value)) {
+      setPhoneNumber(value);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!phoneNumber) {
+      alert("Please enter a valid phone number.");
+      return;
+    }
+  
+    const payload = {
+      phoneNumber: `${countryCode}${phoneNumber}`.slice(1),
+    };
+  
+    try {
+      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
+      const response = await fetch(`${VERI_BASEURL}/overly/send-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+        return;
+      }
+  
+       await response.json();
+     // console.log(data.message); // OTP sent successfully
+      setOtpSent(true);
+    } catch (error) {
+      let y=error
+      y=null
+      console.error("Error sending OTP:", y);
+      alert("Failed to send OTP. Please try again.");
+    }
+  };
+  
+  const handleVerifyOtp = async () => {
+    if (!otp) {
+      alert("Please enter the OTP.");
+      return;
+    }
+  
+    const payload = {
+      phoneNumber: `${countryCode}${phoneNumber}`.slice(1),
+      otp,
+    };
+  
+    try {
+      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
+      const response = await fetch(`${VERI_BASEURL}/overly/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
+        return;
+      }
+  
+      const data = await response.json();
+     // console.log(data.message); // OTP verified successfully
+      localStorage.setItem("code", data.code);
+      setIsVerified(true);
+      window.location.replace("/chat")
+    } catch (error) {
+      let y=error
+      y=null
+
+      console.error("Error verifying OTP:", y);
+      alert("Failed to verify OTP. Please try again.");
+    }
+  };
+  
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className={styles.container}>
+      {!otpSent && !isVerified && (
+        <div className={styles.form}>
+          {/* {<label htmlFor="countrySearch">Search Country</label>} */}
+          <input
+            id="countrySearch"
+            type="text"
+            placeholder="Type to filter..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className={styles.searchInput}
+          />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* <label htmlFor="country">Select Country</label> */}
+          <select
+            id="country"
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value)}
+            className={styles.countrySelect}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+            {[...filteredCountries,{name:'',flag:'',callingCode:''}].map((country, index) => (
+              <option key={index} value={country.callingCode}>
+                {/*country.flag*/} {country.name} ({country.callingCode})
+              </option>
+            ))}
+          </select>
+
+          {/* <label htmlFor="phone">Enter Whatsapp Number</label> */}
+          <div className={styles.phoneInput}>
+            <span className={styles.countryCode}>{countryCode}</span>
+            <input
+              type="tel"
+              id="phone"
+              placeholder="Enter your whatsapp number"
+              value={phoneNumber}
+              onChange={handlePhoneNumberChange}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </div>
+          <button onClick={handleSendOtp} className={styles.registerButton}>
+           Register Number
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      )}
+
+      {otpSent && !isVerified && (
+        <div className={styles.form}>
+          <div className={styles.otpSent}>
+            OTP has been sent to <strong>{countryCode}{phoneNumber}</strong>.
+          </div>
+          <label htmlFor="otp">Enter OTP</label>
+          <input
+            type="text"
+            id="otp"
+            placeholder="Enter the OTP"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <button onClick={handleVerifyOtp} className={styles.registerButton}>
+            Verify OTP
+          </button>
+        </div>
+      )}
+
+      {isVerified && (
+        <div className={styles.form}>
+          <div className={styles.otpSent}>Your phone number is verified!</div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default PhoneRegistration;
