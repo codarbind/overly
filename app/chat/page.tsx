@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "../../styles/ChatInterface.module.css"; // CSS module for styling
 import axios from "axios";
+import { useRouter } from "next/router";
 
 const ChatInterface: React.FC = () => {
   const [message, setMessage] = useState("");
@@ -10,32 +11,51 @@ const ChatInterface: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<{ text?: string; image?: string }[]>([]);
 
-  const handleSendMessage = async () => {
+  useEffect(() => {
+
+    const code = localStorage.getItem("code");
+    if (!code) {
+       window.location.replace("/register"); // Redirect to /register
+    }
+}, []);
+const handleSendMessage = async () => {
+
+  
     if (!message && !image) {
       alert("Please enter a message or upload an image.");
       return;
     }
-
+  
+    const code = localStorage.getItem("code"); // Get the code (encrypted phone number) from localStorage
+  
+    // If no code, redirect to /register
+    if (!code) {
+      window.location.replace("/register"); 
+      return; // Prevent further execution if no code is found
+    }
+  
     try {
       const formData = new FormData();
-      if (message) formData.append("message", message);
-      if (image) formData.append("image", image);
-
-      // Backend endpoint call
-      await axios.post("/api/chat/send", formData, {
+      if (message) formData.append("text", message); // Append the message
+      if (image) formData.append("media", image); // Append the image file
+  
+      // Append the code (encrypted phone number) to the formData
+      formData.append("code", code);
+  
+      // Send request to backend
+      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
+     
+      await axios.post(`${VERI_BASEURL}/overly/message`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-
-    //   // Update chat history locally
-    //   setChatHistory((prev) => [
-    //     ...prev,
-    //     { text: message, image: previewUrl },
-    //   ]);
+  
+      // Clear the form fields after sending the message
       setMessage("");
       setImage(null);
-      setPreviewUrl(null);
+      setPreviewUrl(null); // Reset preview if any
+  
     } catch (error) {
       console.error("Error sending message:", error);
     }

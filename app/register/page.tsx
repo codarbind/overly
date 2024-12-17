@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, } from "react";
 import styles from "../../styles/PhoneRegistration.module.css"; // CSS module for styling
 import axios from "axios";
-
+import { useRouter } from "next/router";
 interface Country {
   name: string;
   flag: string;
@@ -14,11 +14,12 @@ const PhoneRegistration: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [countryCode, setCountryCode] = useState("1"); // Default to USA code
   const [countries, setCountries] = useState<Country[]>([]);
+  const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [isVerified, setIsVerified] = useState(false);
 
-  // Fetch countries data on component mount
   useEffect(() => {
     axios
       .get("https://restcountries.com/v3.1/all?fields=name,flags,idd")
@@ -30,69 +31,150 @@ const PhoneRegistration: React.FC = () => {
             ? `${country.idd.root}${country.idd.suffixes?.[0] || ""}`
             : "1", // Default to 1 if no calling code
         }));
+
+        // Sort countries alphabetically
+        countryData.sort((a: Country, b: Country) =>
+          a.name.localeCompare(b.name)
+        );
+
         setCountries(countryData);
+        setFilteredCountries(countryData);
       })
       .catch((error) => {
-        console.error("Error fetching countries:", error);
+      //  console.error("Error fetching countries:", error);
       });
   }, []);
 
-  const handleSendOtp = () => {
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value.toLowerCase();
+    setSearchTerm(term);
+    setFilteredCountries(
+      countries.filter((country) =>
+        country.name.toLowerCase().includes(term)
+      )
+    );
+  };
+
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow only numbers and prevent leading zero
+    if (/^[1-9][0-9]*$|^$/.test(value)) {
+      setPhoneNumber(value);
+    }
+  };
+
+  const handleSendOtp = async () => {
     if (!phoneNumber) {
       alert("Please enter a valid phone number.");
       return;
     }
-
-    console.log("OTP sent to:", `${countryCode}${phoneNumber}`);
-    setOtpSent(true);
+  
+    const payload = {
+      phoneNumber: `${countryCode}${phoneNumber}`.slice(1),
+    };
+  
+    try {
+      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
+      const response = await fetch(`${VERI_BASEURL}/overly/send-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+        return;
+      }
+  
+      const data = await response.json();
+     // console.log(data.message); // OTP sent successfully
+      setOtpSent(true);
+    } catch (error) {
+     // console.error("Error sending OTP:", error);
+      alert("Failed to send OTP. Please try again.");
+    }
   };
-
-  const handleVerifyOtp = () => {
+  
+  const handleVerifyOtp = async () => {
     if (!otp) {
       alert("Please enter the OTP.");
       return;
     }
-
-    if (otp === "1234") {
-      console.log("OTP verified");
+  
+    const payload = {
+      phoneNumber: `${countryCode}${phoneNumber}`.slice(1),
+      otp,
+    };
+  
+    try {
+      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
+      const response = await fetch(`${VERI_BASEURL}/overly/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
+        return;
+      }
+  
+      const data = await response.json();
+     // console.log(data.message); // OTP verified successfully
+      localStorage.setItem("code", data.code);
       setIsVerified(true);
-    } else {
-      alert("Invalid OTP. Please try again.");
+      window.location.replace("/chat")
+    } catch (error) {
+     // console.error("Error verifying OTP:", error);
+      alert("Failed to verify OTP. Please try again.");
     }
   };
+  
 
   return (
     <div className={styles.container}>
       {!otpSent && !isVerified && (
         <div className={styles.form}>
+          {/* {<label htmlFor="countrySearch">Search Country</label>} */}
+          <input
+            id="countrySearch"
+            type="text"
+            placeholder="Type to filter..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className={styles.searchInput}
+          />
+
           <label htmlFor="country">Select Country</label>
           <select
             id="country"
             value={countryCode}
             onChange={(e) => setCountryCode(e.target.value)}
+            className={styles.countrySelect}
           >
-            {countries.map((country, index) => (
+            {[...filteredCountries,{name:'',flag:'',callingCode:''}].map((country, index) => (
               <option key={index} value={country.callingCode}>
-                {country.flag ? (
-                  <>
-                    {country.name} ({country.callingCode})
-                  </>
-                ) : (
-                  country.name
-                )}
+                {/*country.flag*/} {country.name} ({country.callingCode})
               </option>
             ))}
           </select>
 
           <label htmlFor="phone">Enter Phone Number</label>
           <div className={styles.phoneInput}>
-            <span>{countryCode}</span>
+            <span className={styles.countryCode}>{countryCode}</span>
             <input
-              type="text"
+              type="tel"
               id="phone"
               placeholder="Enter your phone number"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={handlePhoneNumberChange}
             />
           </div>
           <button onClick={handleSendOtp} className={styles.registerButton}>
@@ -123,7 +205,6 @@ const PhoneRegistration: React.FC = () => {
       {isVerified && (
         <div className={styles.form}>
           <div className={styles.otpSent}>Your phone number is verified!</div>
-          {/* Add further steps or redirect here */}
         </div>
       )}
     </div>
