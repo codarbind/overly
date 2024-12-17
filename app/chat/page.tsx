@@ -1,63 +1,55 @@
 'use client'
 
 import React, { useEffect, useState } from "react";
-import styles from "../../styles/ChatInterface.module.css"; // CSS module for styling
+import styles from "../../styles/ChatInterface.module.css";
 import axios from "axios";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCamera, faRemove } from "@fortawesome/free-solid-svg-icons";
 
 const ChatInterface: React.FC = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  //const [chatHistory, setChatHistory] = useState<{ text?: string; image?: string }[]>([]);
 
   useEffect(() => {
-
     const code = localStorage.getItem("code");
     if (!code) {
-       window.location.replace("/"); // Redirect to /
+      window.location.replace("/"); // Redirect to /
     }
-}, []);
-const handleSendMessage = async () => {
+  }, []);
 
-  
+  const handleSendMessage = async () => {
     if (!message && !image) {
       alert("Please enter a message or upload an image.");
       return;
     }
-  
-    const code = localStorage.getItem("code"); // Get the code (encrypted phone number) from localStorage
-  
-    // If no code, redirect to /
+
+    const code = localStorage.getItem("code");
+
     if (!code) {
-      window.location.replace("/"); 
-      return; // Prevent further execution if no code is found
+      window.location.replace("/");
+      return;
     }
-  
+
     try {
       const formData = new FormData();
-      if (message) formData.append("text", message); // Append the message
-      if (image) formData.append("media", image); // Append the image file
-  
-      // Append the code (encrypted phone number) to the formData
+      if (message) formData.append("text", message);
+      if (image) formData.append("media", image);
       formData.append("code", code);
-  
-      // Send request to backend
-      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
-     setLoading(true)
+
+      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL;
+      setLoading(true);
       await axios.post(`${VERI_BASEURL}/overly/message`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
-  
-      // Clear the form fields after sending the message
-      setLoading(false)
+
+      setLoading(false);
       setMessage("");
       setImage(null);
-      setPreviewUrl(null); // Reset preview if any
-  
+      setPreviewUrl(null);
     } catch (error) {
+      setLoading(false);
       console.error("Error sending message:", error);
     }
   };
@@ -72,16 +64,43 @@ const handleSendMessage = async () => {
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          setImage(file);
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      setImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      alert("Please upload a valid image.");
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
   return (
-    <div className={styles.container}>
-      <div className={styles.chatWindow}>
-        {/* {chatHistory.map((chat, index) => (
-          <div key={index} className={styles.chatBubble}>
-            {chat.text && <p>{chat.text}</p>}
-            {chat.image && <img src={chat.image} alt="Uploaded preview" />}
-          </div>
-        ))} */}
-      </div>
+    <div
+      className={styles.container}
+      onPaste={handlePaste}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
+      <div className={styles.chatWindow}></div>
 
       <div className={styles.inputArea}>
         {previewUrl && (
@@ -94,7 +113,7 @@ const handleSendMessage = async () => {
                 setPreviewUrl(null);
               }}
             >
-              Remove
+              <FontAwesomeIcon icon={faRemove} size="lg" />
             </button>
           </div>
         )}
@@ -114,14 +133,15 @@ const handleSendMessage = async () => {
             onChange={handleImageUpload}
           />
           <label htmlFor="upload" className={styles.uploadButton}>
-            📷
+          <FontAwesomeIcon icon={faCamera} size="lg" />
           </label>
-          {loading?
-          'sending...':
-          (<button onClick={handleSendMessage} className={styles.sendButton}>
-            Send
-          </button>)}
-
+          {loading ? (
+            "Sending..."
+          ) : (
+            <button onClick={handleSendMessage} className={styles.sendButton}>
+              Send
+            </button>
+          )}
         </div>
       </div>
     </div>
