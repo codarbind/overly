@@ -1,220 +1,151 @@
 'use client'
 
-import React, { useState, useEffect, } from "react";
-import styles from "../styles/PhoneRegistration.module.css"; // CSS module for styling
+import React, { useEffect, useState } from "react";
+import styles from "../styles/ChatInterface.module.css";
 import axios from "axios";
-interface Country {
-  name: string;
-  flag: string;
-  callingCode: string;
-}
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCamera, faRemove } from "@fortawesome/free-solid-svg-icons";
 
-const PhoneRegistration: React.FC = () => {
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [countryCode, setCountryCode] = useState("1"); // Default to USA code
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [isVerified, setIsVerified] = useState(false);
+const ChatInterface: React.FC = () => {
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [image, setImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    axios
-      .get("https://restcountries.com/v3.1/all?fields=name,flags,idd")
-      .then((response) => {
-        const countryData = response.data.map((country: { name: { common: string; }; flags: { svg: string; }; idd: { root: string; suffixes: string[]; }; }) => ({
-          name: country.name.common,
-          flag: country.flags.svg,
-          callingCode: country.idd?.root
-            ? `${country.idd.root}${country.idd.suffixes?.[0] || ""}`
-            : "1", // Default to 1 if no calling code
-        }));
-
-        // Sort countries alphabetically
-        countryData.sort((a: Country, b: Country) =>
-          a.name.localeCompare(b.name)
-        );
-
-        setCountries(countryData);
-        setFilteredCountries(countryData);
-      })
-      .catch((error) => {
-        let y=error
-        y=null
-       console.error("Error fetching countries:", y);
-      });
+    const code = localStorage.getItem("code");
+    if (!code) {
+      window.location.replace("/register"); // Redirect to /
+    }
   }, []);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value.toLowerCase();
-    setSearchTerm(term);
-    setFilteredCountries(
-      countries.filter((country) =>
-        country.name.toLowerCase().includes(term)
-      )
-    );
-  };
-
-  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-
-    // Allow only numbers and prevent leading zero
-    if (/^[1-9][0-9]*$|^$/.test(value)) {
-      setPhoneNumber(value);
-    }
-  };
-
-  const handleSendOtp = async () => {
-    if (!phoneNumber) {
-      alert("Please enter a valid phone number.");
+  const handleSendMessage = async () => {
+    if (!message && !image) {
+      alert("Please enter a message or upload an image.");
       return;
     }
-  
-    const payload = {
-      phoneNumber: `${countryCode}${phoneNumber}`.slice(1),
-    };
-  
-    try {
-      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
-      const response = await fetch(`${VERI_BASEURL}/overly/send-otp`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-  
-      if (!response.ok) {
-        const error = await response.json();
-        alert(`Error: ${error.message}`);
-        return;
-      }
-  
-       await response.json();
-     // console.log(data.message); // OTP sent successfully
-      setOtpSent(true);
-    } catch (error) {
-      let y=error
-      y=null
-      console.error("Error sending OTP:", y);
-      alert("Failed to send OTP. Please try again.");
-    }
-  };
-  
-  const handleVerifyOtp = async () => {
-    if (!otp) {
-      alert("Please enter the OTP.");
+
+    const code = localStorage.getItem("code");
+
+    if (!code) {
+      window.location.replace("/register");
       return;
     }
-  
-    const payload = {
-      phoneNumber: `${countryCode}${phoneNumber}`.slice(1),
-      otp,
-    };
-  
-    try {
-      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL
-      const response = await fetch(`${VERI_BASEURL}/overly/verify-otp`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-  
-      if (!response.ok) {
-        const error = await response.json();
-        alert(`Error: ${error.error}`);
-        return;
-      }
-  
-      const data = await response.json();
-     // console.log(data.message); // OTP verified successfully
-      localStorage.setItem("code", data.code);
-      setIsVerified(true);
-      window.location.replace("/chat")
-    } catch (error) {
-      let y=error
-      y=null
 
-      console.error("Error verifying OTP:", y);
-      alert("Failed to verify OTP. Please try again.");
+    try {
+      const formData = new FormData();
+      if (message) formData.append("text", message);
+      if (image) formData.append("media", image);
+      formData.append("code", code);
+
+      const VERI_BASEURL = process.env.NEXT_PUBLIC_VERI_BASEURL;
+      setLoading(true);
+      await axios.post(`${VERI_BASEURL}/overly/message`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setLoading(false);
+      setMessage("");
+      setImage(null);
+      setPreviewUrl(null);
+    } catch (error) {
+      setLoading(false);
+      console.error("Error sending message:", error);
     }
   };
-  
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      alert("Please upload a valid image.");
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          setImage(file);
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      setImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      alert("Please upload a valid image.");
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
 
   return (
-    <div className={styles.container}>
-      {!otpSent && !isVerified && (
-        <div className={styles.form}>
-          {/* {<label htmlFor="countrySearch">Search Country</label>} */}
-          <input
-            id="countrySearch"
-            type="text"
-            placeholder="Type to filter..."
-            value={searchTerm}
-            onChange={handleSearch}
-            className={styles.searchInput}
-          />
+    <div
+      className={styles.container}
+      onPaste={handlePaste}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+    >
+      <div className={styles.chatWindow}></div>
 
-          {/* <label htmlFor="country">Select Country</label> */}
-          <select
-            id="country"
-            value={countryCode}
-            onChange={(e) => setCountryCode(e.target.value)}
-            className={styles.countrySelect}
-          >
-            {[...filteredCountries,{name:'',flag:'',callingCode:''}].map((country, index) => (
-              <option key={index} value={country.callingCode}>
-                {/*country.flag*/} {country.name} ({country.callingCode})
-              </option>
-            ))}
-          </select>
-
-          {/* <label htmlFor="phone">Enter Whatsapp Number</label> */}
-          <div className={styles.phoneInput}>
-            <span className={styles.countryCode}>{countryCode}</span>
-            <input
-              type="tel"
-              id="phone"
-              placeholder="Enter your whatsapp number"
-              value={phoneNumber}
-              onChange={handlePhoneNumberChange}
-            />
+      <div className={styles.inputArea}>
+        {previewUrl && (
+          <div className={styles.imagePreview}>
+            <img src={previewUrl} alt="Preview" />
+            <button
+              className={styles.removeImageButton}
+              onClick={() => {
+                setImage(null);
+                setPreviewUrl(null);
+              }}
+            >
+              <FontAwesomeIcon icon={faRemove} size="lg" />
+            </button>
           </div>
-          <button onClick={handleSendOtp} className={styles.registerButton}>
-           Register Number
-          </button>
-        </div>
-      )}
+        )}
 
-      {otpSent && !isVerified && (
-        <div className={styles.form}>
-          <div className={styles.otpSent}>
-            OTP has been sent to <strong>{countryCode}{phoneNumber}</strong>.
-          </div>
-          <label htmlFor="otp">Enter OTP</label>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type your message..."
+          className={styles.textInput}
+        />
+        <div className={styles.actions}>
           <input
-            type="text"
-            id="otp"
-            placeholder="Enter the OTP"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
+            type="file"
+            accept="image/*"
+            id="upload"
+            style={{ display: "none" }}
+            onChange={handleImageUpload}
           />
-          <button onClick={handleVerifyOtp} className={styles.registerButton}>
-            Verify OTP
-          </button>
+          <label htmlFor="upload" className={styles.uploadButton}>
+          <FontAwesomeIcon icon={faCamera} size="lg" />
+          </label>
+          {loading ? (
+            "Sending..."
+          ) : (
+            <button onClick={handleSendMessage} className={styles.sendButton}>
+              Send
+            </button>
+          )}
         </div>
-      )}
-
-      {isVerified && (
-        <div className={styles.form}>
-          <div className={styles.otpSent}>Your phone number is verified!</div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
 
-export default PhoneRegistration;
+export default ChatInterface;
