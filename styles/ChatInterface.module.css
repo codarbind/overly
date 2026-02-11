@@ -99,4 +99,35 @@
   .removeImageButton:hover {
     background: #c82333;
   }
+
+
+  .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.chatTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.logoutButton {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.logoutButton:hover {
+  background-color: #ff1a1a;
+}
+
   

@@ -93,6 +93,17 @@ const ChatInterface: React.FC = () => {
     e.preventDefault();
   };
 
+  const handleLogout = () => {
+    // Clear the stored authentication token or any user data
+    localStorage.removeItem("code"); // remove the OTP code
+    // If you store other user data, you can clear them too
+    // localStorage.clear(); // optionally clear all localStorage
+
+    // Redirect user to login page
+    window.location.replace("/login");
+  };
+
+
   return (
     <div
       className={styles.container}
@@ -100,6 +111,17 @@ const ChatInterface: React.FC = () => {
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
+      {/* Chat Header */}
+      <div className={styles.header}>
+        <h2 className={styles.chatTitle}>Chat</h2>
+        <button
+          className={styles.logoutButton}
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
+      </div>
+
       <div className={styles.chatWindow}></div>
 
       <div className={styles.inputArea}>
@@ -133,7 +155,7 @@ const ChatInterface: React.FC = () => {
             onChange={handleImageUpload}
           />
           <label htmlFor="upload" className={styles.uploadButton}>
-          <FontAwesomeIcon icon={faCamera} size="lg" />
+            <FontAwesomeIcon icon={faCamera} size="lg" />
           </label>
           {loading ? (
             "Sending..."
