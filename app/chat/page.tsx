@@ -100,7 +100,7 @@ const ChatInterface: React.FC = () => {
     // localStorage.clear(); // optionally clear all localStorage
 
     // Redirect user to login page
-    window.location.replace("/login");
+    window.location.replace("/register");
   };
 
 
